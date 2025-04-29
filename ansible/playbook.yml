@@ -1,0 +1,76 @@
+---
+- name: Deploy Flask App
+  hosts: webservers
+  become: true
+  
+  tasks:
+    - name: Update apt cache
+      apt:
+         update_cache: yes
+
+    - name: Install essential packages
+      apt:
+        name: ['git', 'python3-pip', 'python3-venv']
+        state: present
+    - name: Clone app repo
+      git:
+    repo: https://github.com/yourusername/flask-devops-project.git
+    dest: /home/ubuntu/flask-app
+    version: main
+
+- name: Set up virtual environment
+  command: python3 -m venv /home/ubuntu/flask-app/venv creates=/home/ubuntu/flask-app/venv
+
+- name: Install Python requirements
+  pip:
+    requirements: /home/ubuntu/flask-app/app/requirements.txt
+    virtualenv: /home/ubuntu/flask-app/venv
+
+- name: Create Gunicorn systemd service
+  copy:
+    dest: /etc/systemd/system/flask-app.service
+    content: |
+      [Unit]
+      Description=Flask Gunicorn App
+
+      [Service]
+      User=ubuntu
+      WorkingDirectory=/home/ubuntu/flask-app/app
+      ExecStart=/home/ubuntu/flask-app/venv/bin/gunicorn -b 127.0.0.1:8000 app:app
+      Restart=always
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Enable and start the Flask app service
+  systemd:
+    name: flask-app
+    enabled: true
+    state: restarted
+
+      - name: Install NGINX
+  apt:
+    name: nginx
+    state: present
+
+- name: Configure NGINX
+  copy:
+    dest: /etc/nginx/sites-available/default
+    content: |
+      server {
+          listen 80;
+          server_name your_domain_or_ip;
+
+          location / {
+              proxy_pass http://127.0.0.1:8000;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          }
+      }
+
+- name: Restart NGINX
+  service:
+    name: nginx
+    state: restarted
+
