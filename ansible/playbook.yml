@@ -15,7 +15,7 @@
         
     - name: Clone app repo
       git:
-        repo: https://github.com/saikamal33/flask-devops-project.git
+        repo: https://github.com/saikamal33/flask-devops-proj.git
         dest: /home/ubuntu/flask-app
         version: main
     
